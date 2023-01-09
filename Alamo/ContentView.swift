@@ -16,7 +16,7 @@ import Combine
 struct ContentView: View {
    
     @ObservedObject var obs = observe()
-    let defaults = UserDefaults.standard
+    
     
     var body: some View {
        
@@ -25,14 +25,10 @@ struct ContentView: View {
                 
                 card(currencyUSD: i.currencyUSD, currencyEUR: i.currencyEUR, currencyGBP: i.currencyGBP,dateUpdate: i.dateUpdate)
 
-            }.onAppear() {
-//               card()
-            }
-            
-            .navigationBarTitle("BTC Price")
+            }.navigationBarTitle("BTC Price")
                 .toolbar {
                     NavigationLink(
-                        destination: ListScreen(),
+                        destination: ListScreen(coinData: obs.coinData),
                         label: {
                             Text("History")
                         })
@@ -47,19 +43,13 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
-//struct Card_Previews: PreviewProvider {
-//    static var previews: some View {
-//        card()
-//    }
-//}
 
 class observe: ObservableObject, Identifiable{
     @Published var datas = [datatype]()
-    @Published var coinHistory = [coinRecord]()
-    let defaults = UserDefaults.standard
+    @Published var coinData = [[String]]()
     
     init(){
-        
+        coinData.removeAll()
         performFetch()
      
     }
@@ -69,25 +59,24 @@ class observe: ObservableObject, Identifiable{
             switch response.result{
             case let .success(value):
                 
-//                print(value)
                 let json = try! JSON(data: value)
                 
                 self.datas.append(datatype(id: json["time"]["updateduk"].stringValue, currencyEUR: json["bpi"]["EUR"]["rate"].stringValue, currencyUSD: json["bpi"]["USD"]["rate"].stringValue, currencyGBP: json["bpi"]["GBP"]["rate"].stringValue,dateUpdate: json["time"]["updateduk"].stringValue))
-
-                self.coinHistory.append(coinRecord(id: json["time"]["updateduk"].stringValue, currencyEUR: json["bpi"]["EUR"]["rate"].stringValue, currencyUSD: json["bpi"]["USD"]["rate"].stringValue, currencyGBP: json["bpi"]["GBP"]["rate"].stringValue))
+                
+                self.coinData.append([json["time"]["updateduk"].stringValue,json["bpi"]["EUR"]["rate"].stringValue,json["bpi"]["USD"]["rate"].stringValue,json["bpi"]["GBP"]["rate"].stringValue])
                 
             case let .failure(err):
                 print(err)
                 print("error")
                 
             }
-            print(self.datas)
+            print(self.coinData)
             DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) {
                 self.datas.removeAll()
                 self.performFetch()
             }
       }
-}
+    }
 }
 
 struct datatype : Identifiable{
@@ -98,14 +87,7 @@ struct datatype : Identifiable{
     @State var currencyGBP :String
     @State var dateUpdate :String
 }
-struct coinRecord : Identifiable{
-    
-    @State var id: String
-    @State var currencyEUR :String
-    @State var currencyUSD :String
-    @State var currencyGBP :String
 
-}
 
 struct card: View{
   
@@ -208,15 +190,14 @@ struct card: View{
 struct ListScreen: View{
     
     @ObservedObject var obs = observe()
-    let defaults = UserDefaults.standard
-    var coinData = [String:[String]]()
+    var coinData = [[String]]()
 
     var body: some View{
-        
-        List(obs.coinHistory){ coinData in
+ 
+        List(coinData, id: \.self){ coinData in
             VStack{
                 
-                Text(coinData.id)
+                Text(coinData[0])
                     .padding(.vertical)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
@@ -231,7 +212,7 @@ struct ListScreen: View{
                         .frame(width: 30,height: 30)
                         .clipShape(Circle())
                         .padding()
-                    Text(coinData.currencyGBP)
+                    Text(coinData[3])
                     
                 }
                 HStack{
@@ -242,7 +223,7 @@ struct ListScreen: View{
                         .foregroundColor(Color.green)
                         .clipShape(Circle())
                         .padding()
-                    Text(coinData.currencyUSD)
+                    Text(coinData[2])
                     
                 }
                 HStack{
@@ -252,7 +233,7 @@ struct ListScreen: View{
                         .frame(width: 30,height: 30)
                         .clipShape(Circle())
                         .padding()
-                    Text(coinData.currencyEUR)
+                    Text(coinData[1])
                     
                 }
             }
