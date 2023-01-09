@@ -10,7 +10,7 @@ import Alamofire
 import SwiftyJSON
 import Combine
 
-//ยังupdate หน้าui เวลา recall api ไม่ได้
+
 // ยังเก็บdataส่งค่าไปอีกหน้าไม่ได้ แต่ทำarrayไว้รอรับแล้วถ้า data มาจะโชว์ List
 
 struct ContentView: View {
@@ -47,11 +47,11 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
-struct Card_Previews: PreviewProvider {
-    static var previews: some View {
-        card()
-    }
-}
+//struct Card_Previews: PreviewProvider {
+//    static var previews: some View {
+//        card()
+//    }
+//}
 
 class observe: ObservableObject, Identifiable{
     @Published var datas = [datatype]()
@@ -60,21 +60,34 @@ class observe: ObservableObject, Identifiable{
     
     init(){
         
-        AF.request("https://api.coindesk.com/v1/bpi/currentprice.json",method: .get).responseData { (data) in
-            
-            let json = try! JSON(data: data.data!)
-
-            self.datas.append(datatype(id: json["time"]["updateduk"].stringValue, currencyEUR: json["bpi"]["EUR"]["rate"].stringValue, currencyUSD: json["bpi"]["USD"]["rate"].stringValue, currencyGBP: json["bpi"]["GBP"]["rate"].stringValue,dateUpdate: json["time"]["updateduk"].stringValue))
-
-            self.coinHistory.append(coinRecord(id: json["time"]["updateduk"].stringValue, currencyEUR: json["bpi"]["EUR"]["rate"].stringValue, currencyUSD: json["bpi"]["USD"]["rate"].stringValue, currencyGBP: json["bpi"]["GBP"]["rate"].stringValue))
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) {
-            observe()
-//            ContentView()
-          
-        }
+        performFetch()
+     
     }
+    func performFetch() {
+        
+        AF.request("https://api.coindesk.com/v1/bpi/currentprice.json", method: .get).responseData { (response) in
+            switch response.result{
+            case let .success(value):
+                
+//                print(value)
+                let json = try! JSON(data: value)
+                
+                self.datas.append(datatype(id: json["time"]["updateduk"].stringValue, currencyEUR: json["bpi"]["EUR"]["rate"].stringValue, currencyUSD: json["bpi"]["USD"]["rate"].stringValue, currencyGBP: json["bpi"]["GBP"]["rate"].stringValue,dateUpdate: json["time"]["updateduk"].stringValue))
+
+                self.coinHistory.append(coinRecord(id: json["time"]["updateduk"].stringValue, currencyEUR: json["bpi"]["EUR"]["rate"].stringValue, currencyUSD: json["bpi"]["USD"]["rate"].stringValue, currencyGBP: json["bpi"]["GBP"]["rate"].stringValue))
+                
+            case let .failure(err):
+                print(err)
+                print("error")
+                
+            }
+            print(self.datas)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) {
+                self.datas.removeAll()
+                self.performFetch()
+            }
+      }
+}
 }
 
 struct datatype : Identifiable{
